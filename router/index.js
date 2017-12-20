@@ -13,7 +13,5 @@ router.get("/qr_init",controller.wrap(service.init));
 
 router.get("/qr_status",controller.wrap(service.processStatus));
 
-router.get("/query",controller.wrap(service.query));
-
 
 module.exports = router;
