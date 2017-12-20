@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Alipay</title>
+    <script src="../js/qrcode.js" type="text/javascript"></script>
+    <script src="../js/lib.js" type="text/javascript"></script>
+    <script src="../js/cc.js" type="text/javascript"></script>
+    <style>
+        #container {
+            width:200px;
+            margin-right: auto;
+            margin-left: auto;
+            margin-top: 40px;
+        }
+    </style>
+</head>
+<body>
+    <div id="container"></div>
+    <script>
+        /**
+         * cc 是一个基于ES5的异步库，可以以同步的方式书写异步执行的代码
+         *
+         * https://github.com/yyrdl/cc
+         * */
+        cc(function (exec,ctx,resume) {
+            /**
+             * 获取二维码初始化信息
+             * Get 为http get 请求 工具
+             * */
+            exec.async(Get).assign("qr")("/qr_init",resume);
+
+            exec(function () {
+                /**
+                 * 如果通讯失败
+                 * */
+                if(ctx.qr[0]){
+                    return alert(ctx.qr[0]);
+                }
+                /**
+                 * 如果接口执行失败
+                 * */
+                if(!ctx.qr[1].success){
+                    alert(ctx.qr.msg);
+                    return null;
+                }
+
+                console.log(ctx.qr[1]);
+
+                var config = ctx.qr[1].qr_config;
+
+                ctx.tran_id = ctx.qr[1].tran_id;
+
+                /**
+                 * 显示二维码
+                 * */
+
+                var qr = new AraleQRCode(config);
+
+                document.getElementById("container").appendChild(qr);
+
+                var Max = 1000;
+                /**
+                 * 轮询扫码状态
+                 * */
+                exec.for(function () {
+
+                    if(Max < 0){
+                        alert('超时');
+                        exec.break();
+                    }
+                    Max -- ;
+                    /**
+                     * 查询验证码状态
+                     * */
+                    exec.async(Get).assign("status")("/qr_status?id="+ctx.tran_id,resume);
+
+                    exec(function () {
+                        /**
+                         * 如果通讯失败
+                         * */
+                        if(ctx.status[0]){
+                            alert(ctx.status[0]);
+                            exec.break();
+                        }
+
+                        var status = ctx.status[1];
+                        console.log(status);
+                        if(status.stat === "fail"){
+                            alert(status.msg);
+                            exec.break();
+                        }else if(status.userInfo){
+                            let usr_info = "姓名："+status.userInfo.name+"<br>"+
+                                            "账户："+status.userInfo.account+"<br>"+
+                                            "账户余额:"+status.userInfo.balance+"<br>"+
+                                            "花呗可用额度:"+status.userInfo.huabei_available+"<br>"+
+                                            "花呗总额度:"+status.userInfo.huabei_total+"<br>"+
+                                            "余额宝:"+status.userInfo.yuebao+"<br>";
+                            document.getElementById("container").innerHTML = usr_info;
+                            exec.break();
+                        }
+
+                    });
+                    /**
+                     * 等隔1.5秒进行下一次查询
+                     * */
+                    exec.async(setTimeout)(resume,1500);
+                });
+            });
+        })();
+
+    </script>
+</body>
+</html>
